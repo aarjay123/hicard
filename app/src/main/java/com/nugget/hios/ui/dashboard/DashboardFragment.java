@@ -65,30 +65,6 @@ public class DashboardFragment extends Fragment {
             }
         });
 
-        //the below code is used to allow files to be downloaded via download manager.
-        webView.setDownloadListener(new DownloadListener() {
-            @Override
-            public void onDownloadStart(String url, String userAgent,
-                                        String contentDisposition, String mimeType,
-                                        long contentLength) {
-                DownloadManager.Request request = new DownloadManager.Request(
-                        Uri.parse(url));
-                request.setMimeType(mimeType);
-                String cookies = CookieManager.getInstance().getCookie(url);
-                request.addRequestHeader("cookie", cookies);
-                request.addRequestHeader("User-Agent", userAgent);
-                request.setDescription("Downloading File...");
-                request.setTitle(URLUtil.guessFileName(url, contentDisposition, mimeType));
-                request.allowScanningByMediaScanner();
-                request.setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-                request.setDestinationInExternalPublicDir(
-                        Environment.DIRECTORY_DOWNLOADS, URLUtil.guessFileName(
-                                url, contentDisposition, mimeType));
-                DownloadManager dm = (DownloadManager) getActivity().getSystemService(DOWNLOAD_SERVICE);
-                dm.enqueue(request);
-                Toast.makeText(getActivity().getApplicationContext(), "Menu downloaded, please check your downloads folder", Toast.LENGTH_LONG).show();
-            }});
-
         //New progress bar indicator
         MainActivity mainActivity = (MainActivity) getActivity();
 
@@ -104,7 +80,7 @@ public class DashboardFragment extends Fragment {
             }
         });
 
-        webView.loadUrl("https://thehighlandcafe.github.io/hioswebcore/restaurant.html");
+        webView.loadUrl("https://thehighlandcafe.github.io/hioswebcore/rewards/hicard/pay.html");
 
         return root;
     }

@@ -1,12 +1,12 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <string name="app_name" translatable="false">HiOSMobile</string>
+    <string name="app_name" translatable="false">HiCard</string>
     <string name="title_home">Home</string>
-    <string name="title_dashboard">Food</string>
-    <string name="title_notifications">Hotel</string>
+    <string name="title_dashboard">Pay</string>
+    <string name="title_notifications">Rewards</string>
     <string name="title_rewards">Rewards</string>
     <string name="title_more">More</string>
     <string name="title_settings">Settings</string>
-    <string name="title_roomkey">Room Key</string>
+    <string name="title_roomkey">Account</string>
     <string name="title_comingsoon">Coming Soon</string>
     <string name="title_activity_no_internet">NoInternet</string>
     <!-- Strings used for fragments for navigation -->
@@ -23,8 +23,6 @@
     <string name="whatsnew_url" translatable="false">https://sites.google.com/view/hios-by-thc/download#h.evwm3pfxwkdn</string>
     <string name="notifications_url" translatable="false">https://whatsapp.com/channel/0029Va8U5lXISTkDAhk4bj3J</string>
     <string name="hiosmusic_url" translatable="false">https://sites.google.com/view/hios-by-thc/download-hiosmusic#h.ogr0r3hzljpf</string>
-    <string name="hiosweather_url" translatable="false">https://sites.google.com/view/hios-by-thc/hiosweather#h.rynyo42t0yud</string>
-    <string name="hiosdesktop_url">https://sites.google.com/view/hios-by-thc/hiosdesktop</string>
     <string name="hienterprises_url" translatable="false">https://sites.google.com/view/thehighlandcafe</string>
     <string name="support_url" translatable="false">https://sites.google.com/view/thehighlandcafe/customer-support</string>
 
@@ -37,12 +35,11 @@
     <string name="threads_url">https://www.threads.net/@thehighlandcafe</string>
     <string name="thehighlandcafe_url">https://sites.google.com/view/hicafe</string>
     <string name="nuggetdev_url">https://sites.google.com/view/nuggetdev</string>
-    <string name="hios_url">https://sites.google.com/view/hios-by-thc</string>
-    <string name="hiossocial_url">https://sites.google.com/view/hios-by-thc/hisocial</string>
+    <string name="hios_url">https://sites.google.com/view/hirewards</string>
     <string name="privacypolicy_url">https://sites.google.com/view/hios-by-thc/privacy-policy</string>
     <string name="github_release_url">https://github.com/aarjay123/harmony/releases/latest</string>
     <string name="github_prerelease_url">https://github.com/aarjay123/harmony/releases</string>
-    <string name="direct_download_url">https://github.com/aarjay123/harmony/releases/latest/download/hiosmobile.apk</string>
+    <string name="direct_download_url">https://github.com/aarjay123/hicard/releases/latest/download/hicard.apk</string>
     <string name="hirewards_url">https://sites.google.com/view/hirewards#h.j6t1hqgf8fxc</string>
 
     <string name="title_activity_settings">Settings</string>
@@ -62,7 +59,7 @@
 
     <string name="websites_header">Websites</string>
 
-    <string name="about_app">About HiOSMobile</string>
+    <string name="about_app">About HiCard</string>
 
     <string name="socials_header">Socials</string>
 
@@ -90,23 +87,23 @@
 
 
     <!-- Updates Preferences -->
-    <string name="update_category">Update HiOSMobile</string>
+    <string name="update_category">Update HiCard</string>
 
-    <string name="updates_title">Manually Update HiOSMobile</string>
-    <string name="updates_summary">Download the latest app APK installer file.\n\n1. Tap here, tap \'Download Anyway\' on the popup, since HiOSMobile is safe.\n2. Allow your browser to \'Install Unknown Apps\', select \'Open\' and finally \'update\'.\n\nThis Version: 2.6.1.1</string>
-    <string name="updates_description">Tap the button below to download the latest HiOSMobile version to your Downloads folder.</string>
-    <string name="updates_button">Download HiOSMobile File</string>
+    <string name="updates_title">Manually Update HiCard</string>
+    <string name="updates_summary">Download the latest app APK installer file.\n\n1. Tap here, tap \'Download Anyway\' on the popup, since HiCard is safe.\n2. Allow your browser to \'Install Unknown Apps\', select \'Open\' and finally \'update\'.\n\nThis Version: 2.0</string>
+    <string name="updates_description">Tap the button below to download the latest HiCard version to your Downloads folder.</string>
+    <string name="updates_button">Download HiCard File</string>
 
     <string name="updates_prerelease_title">Download Unstable Version</string>
-    <string name="updates_prerelease_summary">Download the latest HiOSMobile pre-release version.\n\nOn the releases page on GitHub, find one with the \'pre-release\' tag.\n\nCAUTION: Pre-releases can be unstable!</string>
+    <string name="updates_prerelease_summary">Download the latest HiCard pre-release version.\n\nOn the releases page on GitHub, find one with the \'pre-release\' tag.\n\nCAUTION: Pre-releases can be unstable!</string>
 
-    <string name="autoupdate_title">Auto-Update HiOSMobile</string>
-    <string name="autoupdate_summary">Learn how to update HiOSMobile automatically on our website.</string>
+    <string name="autoupdate_title">Auto-Update HiCard</string>
+    <string name="autoupdate_summary">Learn how to update HiCard automatically on our website.</string>
 
     <string name="notifications_category">Update notifications and more</string>
 
     <string name="notifications_title">Update Notifications</string>
-    <string name="notifications_summary">Join our WhatsApp Channel to get notified every time we update HiOSMobile.</string>
+    <string name="notifications_summary">Join our WhatsApp Channel to get notified every time we update HiCard.</string>
 
     <string name="whatsnew_title">What\'s New?</string>
 
@@ -117,8 +114,8 @@
     <string name="hiosweather_title">HiOSWeather</string>
     <string name="hiosweather_summary">This is our weather app, which simply allows you to check the weather, use widgets, and more!</string>
 
-    <string name="hirewards_title">HiRewards</string>
-    <string name="hirewards_summary">Wanting to earn rewards for visiting your favourite brands by The Highland Cafe™? No probs, as you can now download HiRewards on your smartphone!</string>
+    <string name="hirewards_title">HiOSMobile</string>
+    <string name="hirewards_summary">This is our flagship app, which allows you to do things with our brands, from ordering food to checking-in, and more!</string>
 
     <string name="nuggetdev_apps_title">Other software by HiDev</string>
     <string name="nuggetdev_apps_summary">Take a look at other great apps, software, and services also by HiDev!</string>
@@ -131,7 +128,7 @@
     <!-- Websites Preferences -->
     <string name="hienterprises_title">The Highland Cafe™ Enterprises Website</string>
     <string name="nuggetdev_website_title">HiDev Website</string>
-    <string name="hios_title">HiOSMobile Website</string>
+    <string name="hios_title">HiCard Website</string>
     <string name="thehighlandcafe_title">The Highland Cafe™ Website</string>
 
     <!-- Socials Preferences -->
@@ -159,9 +156,9 @@
     <string name="internet_header">WiFi and Internet</string>
 
     <!--Help Center Strings -->
-    <string name="tutorial_title">How to use HiOSMobile</string>
+    <string name="tutorial_title">How to use HiRewards</string>
     <string name="tutorial_header">Navigation Tutorial</string>
-    <string name="tutorial_summary">Have a look at our tutorial animation to see how to get around HiOSMobile.</string>
+    <string name="tutorial_summary">Have a look at our tutorial animation to see how to get around HiRewards.</string>
 
     <string name="general_title">General Help</string>
 

@@ -7,11 +7,11 @@ android {
     compileSdk 35
 
     defaultConfig {
-        applicationId "com.nugget.hios"
+        applicationId "com.nugget.rewards"
         minSdk 24
         targetSdk 35
-        versionCode 4
-        versionName "2.6.1.1"
+        versionCode 3
+        versionName "2.0"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -40,8 +40,8 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.2.0'
     implementation 'androidx.lifecycle:lifecycle-livedata-ktx:2.8.7'
     implementation 'androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.7'
-    implementation 'androidx.navigation:navigation-fragment:2.8.5'
-    implementation 'androidx.navigation:navigation-ui:2.8.5'
+    implementation 'androidx.navigation:navigation-fragment:2.8.6'
+    implementation 'androidx.navigation:navigation-ui:2.8.6'
     implementation 'androidx.preference:preference:1.2.1'
     implementation 'org.imaginativeworld.oopsnointernet:oopsnointernet:2.0.0'
     implementation 'androidx.webkit:webkit:1.12.1'

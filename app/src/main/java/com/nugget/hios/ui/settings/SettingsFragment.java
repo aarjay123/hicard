@@ -72,7 +72,7 @@ public class SettingsFragment extends Fragment {
             }
         });
 
-        webView.loadUrl("https://thehighlandcafe.github.io/hioswebcore/roomkey.html");
+        webView.loadUrl("https://thehighlandcafe.github.io/hioswebcore/rewards/hicard/account.html");
 
         return root;
     }

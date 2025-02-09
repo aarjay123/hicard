@@ -74,7 +74,7 @@ public class NotificationsFragment extends Fragment {
             }
         });
 
-        webView.loadUrl("https://thehighlandcafe.github.io/hioswebcore/hotelactivities.html");
+        webView.loadUrl("https://thehighlandcafe.github.io/hioswebcore/rewards/hicard/offers.html");
 
         return root;
     }
