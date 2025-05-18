@@ -1,6 +1,6 @@
 {
-    "name": "hicard",
-    "short_name": "hicard",
+    "name": "HiCard",
+    "short_name": "HiCard",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
