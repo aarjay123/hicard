@@ -31,19 +31,19 @@ class AppsServicesPage extends StatelessWidget {
             ),
           ),
           ListTile(
+            leading: const Icon(Icons.dashboard_rounded),
+            title: const Text("Harmony"),
+            subtitle: const Text("This is the main app by The Highland Cafe™, for doing everything from booking a hotel to ordering food, and more!"),
+            onTap: () {
+              _launchExternalUrl(context, 'https://github.com/aarjay123/harmonyapp');
+            },
+          ),
+          ListTile(
             leading: const Icon(Icons.music_note_rounded),
             title: const Text("HiOSMusic"),
             subtitle: const Text("This is our brand new music app for Android. Your music, your vibe."),
             onTap: () {
               _launchExternalUrl(context, 'https://github.com/aarjay123/hiosmusic');
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.stars_rounded),
-            title: const Text("HiRewards"),
-            subtitle: const Text("Wanting to earn rewards for visiting your favourite brands by The Highland Cafe™? No probs, as you can now download HiRewards on your smartphone!"),
-            onTap: () {
-              _launchExternalUrl(context, 'https://sites.google.com/view/hirewards');
             },
           ),
           ListTile(

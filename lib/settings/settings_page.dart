@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme_provider.dart';
 import 'privacy_policy_page.dart';
 import 'websites_page.dart';
@@ -140,6 +141,23 @@ class _SettingsPageState extends State<SettingsPage> {
               ));
             },
           ),
+
+          const Divider(),
+
+          ListTile(
+            leading: const Icon(Icons.logout_rounded, color: Colors.red),
+            title: const Text("Log Out", style: TextStyle(color: Colors.red)),
+            onTap: () async {
+              final prefs = await SharedPreferences.getInstance();
+              await prefs.setBool('hasLoggedIn', false);
+
+              // Navigate to login screen and clear navigation stack
+              if (context.mounted) {
+                Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+              }
+            },
+          ),
+
         ],
       ),
     );
