@@ -16,7 +16,7 @@ class _AboutHioswebcoreState extends State<AboutHioswebcore> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("About HiOSCore")),
+      appBar: AppBar(title: const Text("About HarmonyCore")),
       body: InAppWebView(
         initialUrlRequest: URLRequest(url: WebUri(url)),
         initialSettings: InAppWebViewSettings(

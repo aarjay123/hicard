@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../settings_ui_components.dart';
+
 class AppsServicesPage extends StatelessWidget {
   const AppsServicesPage({super.key});
 
@@ -17,45 +19,99 @@ class AppsServicesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final groups = [
+      _AppsServicesGroup(
+        title: "Recommended",
+        items: [
+          _AppsServicesItem(
+            icon: Icons.dashboard_rounded,
+            label: "Harmony",
+            subtitle:
+            "This is the main app by The Highland Cafe™, for doing everything from booking a hotel to ordering food, and more!",
+            onTap: () => _launchExternalUrl(context, 'https://github.com/aarjay123/harmonyapp'),
+          ),
+          _AppsServicesItem(
+            icon: Icons.music_note_rounded,
+            label: "HiOSMusic",
+            subtitle: "This is our brand new music app for Android. Your music, your vibe.",
+            onTap: () => _launchExternalUrl(context, 'https://github.com/aarjay123/hiosmusic'),
+          ),
+          _AppsServicesItem(
+            icon: Icons.dashboard_customize_rounded,
+            label: "Other software by HiDev",
+            subtitle: "Take a look at other great apps, software, and services also by HiDev!",
+            onTap: () => _launchExternalUrl(context, 'https://sites.google.com/view/nuggetdev'),
+          ),
+        ],
+      ),
+    ];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Apps & Services"),
       ),
-      body: ListView(
-        children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Text(
-              "Recommended",
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-          ),
-          ListTile(
-            leading: const Icon(Icons.dashboard_rounded),
-            title: const Text("Harmony"),
-            subtitle: const Text("This is the main app by The Highland Cafe™, for doing everything from booking a hotel to ordering food, and more!"),
-            onTap: () {
-              _launchExternalUrl(context, 'https://github.com/aarjay123/harmonyapp');
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.music_note_rounded),
-            title: const Text("HiOSMusic"),
-            subtitle: const Text("This is our brand new music app for Android. Your music, your vibe."),
-            onTap: () {
-              _launchExternalUrl(context, 'https://github.com/aarjay123/hiosmusic');
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.dashboard_customize_rounded),
-            title: const Text("Other software by HiDev"),
-            subtitle: const Text("Take a look at other great apps, software, and services also by HiDev!"),
-            onTap: () {
-              _launchExternalUrl(context, 'https://sites.google.com/view/nuggetdev');
-            },
-          ),
-        ],
+      body: Padding(
+        padding: const EdgeInsets.all(24.0), // Consistent padding
+        child: ListView.builder(
+          itemCount: groups.length,
+          itemBuilder: (context, groupIndex) {
+            final group = groups[groupIndex];
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Step 2: Use the shared SettingsGroupTitle widget
+                SettingsGroupTitle(title: group.title),
+                // Items in the group
+                Column(
+                  children: List.generate(group.items.length, (itemIndex) {
+                    final itemData = group.items[itemIndex]; // Renamed for clarity
+                    final isFirstItem = itemIndex == 0;
+                    final isLastItem = itemIndex == group.items.length - 1;
+
+                    // Step 3: Use the shared SettingsListItem widget and RETURN it
+                    return SettingsListItem(
+                      icon: itemData.icon,
+                      label: itemData.label,
+                      subtitle: itemData.subtitle,
+                      onTap: itemData.onTap,
+                      isFirstItem: isFirstItem,
+                      isLastItem: isLastItem,
+                      // No 'trailing' widget passed, so chevron will appear if onTap is not null
+                    );
+                  }),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
+}
+
+class _AppsServicesGroup {
+  final String title;
+  final List<_AppsServicesItem> items;
+
+  _AppsServicesGroup({
+    required this.title,
+    required this.items,
+  });
+}
+
+class _AppsServicesItem {
+  final IconData icon;
+  final String label;
+  final String? subtitle;
+  final VoidCallback onTap;
+
+  _AppsServicesItem({
+    required this.icon,
+    required this.label,
+    this.subtitle,
+    required this.onTap,
+  });
 }
