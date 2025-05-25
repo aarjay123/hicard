@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../settings_ui_components.dart';
+
 class WebsitesPage extends StatelessWidget {
   const WebsitesPage({super.key});
 
@@ -17,45 +19,104 @@ class WebsitesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    final groups = [
+      _WebsitesGroup(
+        title: "Websites",
+        items: [
+          _WebsitesItem(
+            icon: Icons.business_rounded,
+            label: "The Highland Cafe™ Enterprises",
+            subtitle: "Official website for The Highland Cafe™ Enterprises.",
+            onTap: () => _launchExternalUrl(context, 'https://hienterprises.github.io'),
+          ),
+          _WebsitesItem(
+              icon: Icons.restaurant_rounded,
+              label: "The Highland Cafe™",
+              subtitle: "Official website for The Highland Cafe™.",
+              onTap: () => _launchExternalUrl(context, 'https://www.hienterprises.github.io/hicafe/home'),
+          ),
+          _WebsitesItem(
+              icon: Icons.developer_mode_rounded,
+              label: "HiDev",
+              subtitle: "Official website for HiDev.",
+              onTap: () => _launchExternalUrl(context, 'https://sites.google.com/view/nuggetdev'),
+          ),
+          _WebsitesItem(
+              icon: Icons.stars_rounded,
+              label: "HiCard",
+              subtitle: "Official website for HiCard.",
+              onTap: () => _launchExternalUrl(context, 'https://www.hienterprises.github.io/hicard/home'),
+          ),
+        ],
+      ),
+    ];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text("Websites"),
       ),
-      body: ListView(
-        children: [
-          // Highland Cafe Enterprises
-          ListTile(
-            leading: const Icon(Icons.business_rounded),
-            title: const Text("The Highland Cafe™ Enterprises"),
-            subtitle: const Text("Official website for The Highland Cafe™ Enterprises."),
-            onTap: () => _launchExternalUrl(context, 'https://hienterprises.github.io'),
-          ),
+      body: Padding(
+        padding: const EdgeInsets.all(24.0), // Consistent padding
+        child: ListView.builder(
+          itemCount: groups.length,
+          itemBuilder: (context, groupIndex) {
+            final group = groups[groupIndex];
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Step 2: Use the shared SettingsGroupTitle widget
+                SettingsGroupTitle(title: group.title),
+                // Items in the group
+                Column(
+                  children: List.generate(group.items.length, (itemIndex) {
+                    final itemData = group.items[itemIndex]; // Renamed for clarity
+                    final isFirstItem = itemIndex == 0;
+                    final isLastItem = itemIndex == group.items.length - 1;
 
-          // Highland Cafe
-          ListTile(
-            leading: const Icon(Icons.restaurant_rounded),
-            title: const Text("The Highland Cafe™"),
-            subtitle: const Text("Official website for The Highland Cafe™."),
-            onTap: () => _launchExternalUrl(context, 'https://hienterprises.github.io/hicafe/home'),
-          ),
-
-          // HiDev
-          ListTile(
-            leading: const Icon(Icons.developer_mode_rounded),
-            title: const Text("HiDev"),
-            subtitle: const Text("Official website for HiDev."),
-            onTap: () => _launchExternalUrl(context, 'https://sites.google.com/view/nuggetdev'),
-          ),
-
-          // Harmony Website
-          ListTile(
-            leading: const Icon(Icons.dashboard_rounded),
-            title: const Text("Harmony Website"),
-            subtitle: const Text("Official website for the Harmony apps."),
-            onTap: () => _launchExternalUrl(context, 'https://hienterprises.github.io/harmony/home'),
-          ),
-        ],
+                    // Step 3: Use the shared SettingsListItem widget and RETURN it
+                    return SettingsListItem(
+                      icon: itemData.icon,
+                      label: itemData.label,
+                      subtitle: itemData.subtitle,
+                      onTap: itemData.onTap,
+                      isFirstItem: isFirstItem,
+                      isLastItem: isLastItem,
+                      // No 'trailing' widget passed, so chevron will appear if onTap is not null
+                    );
+                  }),
+                ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }
+}
+
+class _WebsitesGroup {
+  final String title;
+  final List<_WebsitesItem> items;
+
+  _WebsitesGroup({
+    required this.title,
+    required this.items,
+  });
+}
+
+class _WebsitesItem {
+  final IconData icon;
+  final String label;
+  final String? subtitle;
+  final VoidCallback onTap;
+
+  _WebsitesItem({
+    required this.icon,
+    required this.label,
+    this.subtitle,
+    required this.onTap,
+  });
 }

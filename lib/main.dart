@@ -1,62 +1,181 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+// Import Flutter core libraries
+import 'package:flutter/foundation.dart' show kIsWeb; // For platform detection if needed
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+
+// Import third-party packages
+import 'package:provider/provider.dart'; // State management
+import 'package:dynamic_color/dynamic_color.dart'; // For Material You dynamic colors (Android 12+)
+import 'package:flutter_inappwebview/flutter_inappwebview.dart'; // For embedding web content
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'theme_provider.dart';
-import 'colour_scheme.dart';
-import 'fullscreen_menu_page.dart';
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
-import 'package:url_launcher/url_launcher.dart';
+// Import your own app files for theming, helpers, and UI components
+import 'theme_provider.dart'; // Custom ThemeProvider managing theme state and preferences
+import 'colour_scheme.dart'; // Defines your app's color schemes
+import 'device_info_helper.dart'; // Helper for checking device capabilities like dynamic color support
+import 'fullscreen_menu_page.dart'; // Fullscreen menu page for app navigation
+import 'global_slide_transition_builder.dart'; // Custom page transitions
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+// For platform-specific imports (e.g. non-web platforms)
+import 'dart:io' show Platform;
 
-  runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
-      child: const MyApp(),
-    ),
-  );
+// The main entry point of the Flutter app
+void main() {
+  WidgetsFlutterBinding.ensureInitialized(); // Ensures Flutter engine is initialized before running app
+  runApp(const AppLoader()); // Runs the root widget AppLoader
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+// Stateful widget to handle async initialization before showing main app
+class AppLoader extends StatefulWidget {
+  const AppLoader({Key? key}) : super(key: key);
 
-  Future<bool> checkIfLoggedIn() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool('hasLoggedIn') ?? false;
+  @override
+  State<AppLoader> createState() => _AppLoaderState();
+}
+
+class _AppLoaderState extends State<AppLoader> {
+  ThemeProvider? _themeProvider; // Holds the theme provider instance once loaded
+  bool _error = false; // Flag to indicate if initialization failed
+  bool _dynamicColorSupported = false; // Flag for whether dynamic color is supported on device
+
+  @override
+  void initState() {
+    super.initState();
+    _initTheme(); // Start theme initialization asynchronously on widget load
+  }
+
+  // Async method to initialize theme provider and detect dynamic color support
+  Future<void> _initTheme() async {
+    try {
+      // Check device capability for dynamic color (Android 12+)
+      final supported = await DeviceInfoHelper.supportsDynamicColor();
+      _dynamicColorSupported = supported;
+
+      // Create theme provider with dynamic color enabled flag
+      final themeProvider = ThemeProvider(dynamicColorEnabled: supported);
+      await themeProvider.loadPreferences(); // Load saved user theme preferences
+
+      // If device doesn't support dynamic color, forcibly disable it in provider
+      if (!supported) {
+        themeProvider.dynamicColorEnabled = false;
+      }
+
+      // Update state with loaded provider instance, triggers UI rebuild
+      setState(() {
+        _themeProvider = themeProvider;
+      });
+    } catch (e, st) {
+      // On error, log and set error flag to show error UI
+      debugPrint('Failed to init theme: $e\n$st');
+      setState(() {
+        _error = true;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    // If error occurred or theme provider is still null (loading), show error message
+    if (_error || _themeProvider == null) {
+      return const MaterialApp(
+        home: Scaffold(
+          body: Center(child: Text('Failed to load preferences')),
+        ),
+      );
+    }
 
-    return FutureBuilder<bool>(
-      future: checkIfLoggedIn(),
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const MaterialApp(
-            home: Scaffold(body: Center(child: CircularProgressIndicator())),
+    // Provide the loaded ThemeProvider to the widget subtree via Provider package
+    return ChangeNotifierProvider.value(
+      value: _themeProvider!,
+      child: MyApp(dynamicColorSupported: _dynamicColorSupported),
+    );
+  }
+}
+
+// Main app widget, builds MaterialApp with theming based on dynamic color support and user preference
+class MyApp extends StatelessWidget {
+  final bool dynamicColorSupported; // Passed from AppLoader, device capability flag
+
+  const MyApp({Key? key, required this.dynamicColorSupported}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return DynamicColorBuilder(
+      // Builder provides dynamic light and dark color schemes if available
+      builder: (ColorScheme? lightDynamic, ColorScheme? darkDynamic) {
+        final themeProvider = Provider.of<ThemeProvider>(context);
+
+        // Determine if dynamic color should be used based on device and user settings
+        final useDynamic =
+            themeProvider.dynamicColorEnabled && dynamicColorSupported;
+
+        if (useDynamic) {
+          // If dynamic colors enabled and supported, build MaterialApp using them
+          return MaterialApp(
+            debugShowCheckedModeBanner: false,
+            title: 'HiCard',
+            themeMode: themeProvider.themeMode,
+            theme: ThemeData(
+              useMaterial3: true, // Enable Material 3 design
+              colorScheme: lightDynamic ?? lightColorScheme, // Use dynamic or fallback light scheme
+              textTheme: ThemeData.light().textTheme.apply(fontFamily: 'Outfit'), // Custom font
+              pageTransitionsTheme: PageTransitionsTheme(
+                builders: {
+                  // Apply custom slide transition on all platforms
+                  for (final platform in TargetPlatform.values)
+                    platform: GlobalSlidePageTransitionsBuilder(),
+                },
+              ),
+            ),
+            darkTheme: ThemeData(
+              useMaterial3: true,
+              colorScheme: darkDynamic ?? darkColorScheme, // Use dynamic or fallback dark scheme
+              textTheme: ThemeData.dark().textTheme.apply(fontFamily: 'Outfit'),
+              pageTransitionsTheme: PageTransitionsTheme(
+                builders: {
+                  for (final platform in TargetPlatform.values)
+                    platform: GlobalSlidePageTransitionsBuilder(),
+                },
+              ),
+            ),
+            // Main app content scaffold
+            home: ResponsiveScaffold(dynamicColorSupported: dynamicColorSupported),
           );
         }
 
-        final hasLoggedIn = snapshot.data!;
+        // Otherwise, build app with user's selected color scheme (no dynamic color)
+        final ColorScheme lightScheme = themeProvider.currentColorScheme;
+        final ColorScheme darkScheme = ColorScheme.fromSeed(
+          seedColor: lightScheme.primary,
+          brightness: Brightness.dark,
+        );
+
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'HiCard',
+          themeMode: themeProvider.themeMode,
           theme: ThemeData(
             useMaterial3: true,
-            colorScheme: lightColorScheme,
+            colorScheme: lightScheme,
             textTheme: ThemeData.light().textTheme.apply(fontFamily: 'Outfit'),
+            pageTransitionsTheme: PageTransitionsTheme(
+              builders: {
+                for (final platform in TargetPlatform.values)
+                  platform: GlobalSlidePageTransitionsBuilder(),
+              },
+            ),
           ),
           darkTheme: ThemeData(
             useMaterial3: true,
-            colorScheme: darkColorScheme,
+            colorScheme: darkScheme,
             textTheme: ThemeData.dark().textTheme.apply(fontFamily: 'Outfit'),
+            pageTransitionsTheme: PageTransitionsTheme(
+              builders: {
+                for (final platform in TargetPlatform.values)
+                  platform: GlobalSlidePageTransitionsBuilder(),
+              },
+            ),
           ),
-          themeMode: themeProvider.themeMode,
-          home: hasLoggedIn ? const ResponsiveScaffold() : const AuthScreen(),
+          home: ResponsiveScaffold(dynamicColorSupported: dynamicColorSupported),
         );
       },
     );
@@ -64,7 +183,9 @@ class MyApp extends StatelessWidget {
 }
 
 class AuthScreen extends StatefulWidget {
-  const AuthScreen({super.key});
+  final bool dynamicColorSupported;
+
+  const AuthScreen({super.key, required this.dynamicColorSupported});
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -82,7 +203,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const ResponsiveScaffold()),
+        MaterialPageRoute(builder: (_) => ResponsiveScaffold(dynamicColorSupported: widget.dynamicColorSupported)),
       );
     }
   }
@@ -126,7 +247,9 @@ class _AuthScreenState extends State<AuthScreen> {
 }
 
 class ResponsiveScaffold extends StatefulWidget {
-  const ResponsiveScaffold({super.key});
+  final bool dynamicColorSupported;
+
+  const ResponsiveScaffold({super.key, required this.dynamicColorSupported});
 
   @override
   State<ResponsiveScaffold> createState() => _ResponsiveScaffoldState();
@@ -135,6 +258,7 @@ class ResponsiveScaffold extends StatefulWidget {
 class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
   int _selectedIndex = 0;
   InAppWebViewController? _webViewController;
+  bool _hasError = false;
 
   final List<String> _urls = [
     'https://thehighlandcafe.github.io/hioswebcore/rewards/hicard/home.html',
@@ -153,6 +277,7 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
+      _hasError = false;
     });
     _webViewController?.loadUrl(
       urlRequest: URLRequest(url: WebUri(_urls[index])),
@@ -175,10 +300,12 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.menu),
+            icon: const Icon(Icons.menu_open_rounded),
             onPressed: () {
-              Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const FullscreenMenuPage()));
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const FullscreenMenuPage()),
+              );
             },
           ),
         ],
@@ -187,7 +314,9 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
         children: [
           if (isWideScreen) _buildNavigationRail(),
           Expanded(
-            child: InAppWebView(
+            child: _hasError
+                ? _buildErrorPage()
+                : InAppWebView(
               initialUrlRequest:
               URLRequest(url: WebUri(_urls[_selectedIndex])),
               initialOptions: InAppWebViewGroupOptions(
@@ -197,6 +326,12 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
               ),
               onWebViewCreated: (controller) {
                 _webViewController = controller;
+              },
+              onLoadError: (_, __, ___, ____) {
+                setState(() => _hasError = true);
+              },
+              onLoadHttpError: (_, __, ___, ____) {
+                setState(() => _hasError = true);
               },
             ),
           ),
@@ -212,14 +347,10 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
       onDestinationSelected: _onItemTapped,
       labelType: NavigationRailLabelType.all,
       destinations: const [
-        NavigationRailDestination(
-            icon: Icon(Icons.home_rounded), label: Text('Home')),
-        NavigationRailDestination(
-            icon: Icon(Icons.stars_rounded), label: Text('Rewards')),
-        NavigationRailDestination(
-            icon: Icon(Icons.wallet_rounded), label: Text('Pay')),
-        NavigationRailDestination(
-            icon: Icon(Icons.account_circle_rounded), label: Text('Account')),
+        NavigationRailDestination(icon: Icon(Icons.home_rounded), label: Text('Home')),
+        NavigationRailDestination(icon: Icon(Icons.stars_rounded), label: Text('Rewards')),
+        NavigationRailDestination(icon: Icon(Icons.wallet_rounded), label: Text('Pay')),
+        NavigationRailDestination(icon: Icon(Icons.account_circle_rounded), label: Text('Account')),
       ],
     );
   }
@@ -240,6 +371,29 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
           NavigationDestination(icon: Icon(Icons.stars_rounded), label: 'Rewards'),
           NavigationDestination(icon: Icon(Icons.wallet_rounded), label: 'Pay'),
           NavigationDestination(icon: Icon(Icons.account_circle_rounded), label: 'Account'),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorPage() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.cloud_off, size: 80),
+          const SizedBox(height: 20),
+          const Text('Failed to load page. Please check your connection.'),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _hasError = false;
+              });
+              _webViewController?.reload();
+            },
+            child: const Text('Retry'),
+          ),
         ],
       ),
     );
