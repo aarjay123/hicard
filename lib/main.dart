@@ -5,15 +5,28 @@ import 'package:flutter/material.dart';
 // Import third-party packages
 import 'package:provider/provider.dart'; // State management
 import 'package:dynamic_color/dynamic_color.dart'; // For Material You dynamic colors (Android 12+)
-import 'package:flutter_inappwebview/flutter_inappwebview.dart'; // For embedding web content
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart'; // For opening external links
 
 // Import your own app files for theming, helpers, and UI components
 import 'theme_provider.dart'; // Custom ThemeProvider managing theme state and preferences
 import 'colour_scheme.dart'; // Defines your app's color schemes
 import 'device_info_helper.dart'; // Helper for checking device capabilities like dynamic color support
-import 'fullscreen_menu_page.dart'; // Fullscreen menu page for app navigation
 import 'global_slide_transition_builder.dart'; // Custom page transitions
+
+// Import your fragments (pages)
+// TODO: Move the page classes at the bottom of this file into their own separate files.
+// For example: 'fragments/home_page.dart', 'fragments/rewards_page.dart', etc.
+import 'fragments/home_page.dart';
+import 'fragments/rewards_page.dart';
+import 'fragments/pay_page.dart';
+import 'fragments/account_page.dart';
+
+// Import pages for settings and help, adopted from the Harmony app structure
+import 'settings/settings_page.dart';
+import 'helpcenter/helpcenter_page.dart';
+
+// Import the custom AnimatedFabMenu widget, adopted from the Harmony app structure
+import 'widgets/animated_fab_menu.dart';
 
 // For platform-specific imports (e.g. non-web platforms)
 import 'dart:io' show Platform;
@@ -108,16 +121,27 @@ class MyApp extends StatelessWidget {
         final useDynamic =
             themeProvider.dynamicColorEnabled && dynamicColorSupported;
 
+        // Common CardThemeData definition based on Material 3 toggle
+        final CardThemeData commonCardTheme = CardThemeData(
+          // Sharper corners for Material 2, softer for Material 3
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(themeProvider.useMaterial3 ? 12.0 : 8.0),
+          ),
+          // More pronounced shadow for Material 2, subtle for Material 3
+          elevation: themeProvider.useMaterial3 ? 1.0 : 4.0,
+        );
+
         if (useDynamic) {
           // If dynamic colors enabled and supported, build MaterialApp using them
           return MaterialApp(
             debugShowCheckedModeBanner: false,
-            title: 'HiCard',
+            title: 'HiCard', // App title changed to HiCard
             themeMode: themeProvider.themeMode,
             theme: ThemeData(
-              useMaterial3: true, // Enable Material 3 design
+              useMaterial3: themeProvider.useMaterial3, // Enable Material 3 design
               colorScheme: lightDynamic ?? lightColorScheme, // Use dynamic or fallback light scheme
               textTheme: ThemeData.light().textTheme.apply(fontFamily: 'Outfit'), // Custom font
+              cardTheme: commonCardTheme, // Apply the common card theme
               pageTransitionsTheme: PageTransitionsTheme(
                 builders: {
                   // Apply custom slide transition on all platforms
@@ -127,9 +151,10 @@ class MyApp extends StatelessWidget {
               ),
             ),
             darkTheme: ThemeData(
-              useMaterial3: true,
+              useMaterial3: themeProvider.useMaterial3,
               colorScheme: darkDynamic ?? darkColorScheme, // Use dynamic or fallback dark scheme
               textTheme: ThemeData.dark().textTheme.apply(fontFamily: 'Outfit'),
+              cardTheme: commonCardTheme, // Apply the common card theme
               pageTransitionsTheme: PageTransitionsTheme(
                 builders: {
                   for (final platform in TargetPlatform.values)
@@ -137,7 +162,6 @@ class MyApp extends StatelessWidget {
                 },
               ),
             ),
-            // Main app content scaffold
             home: ResponsiveScaffold(dynamicColorSupported: dynamicColorSupported),
           );
         }
@@ -151,12 +175,13 @@ class MyApp extends StatelessWidget {
 
         return MaterialApp(
           debugShowCheckedModeBanner: false,
-          title: 'HiCard',
+          title: 'HiCard', // App title changed to HiCard
           themeMode: themeProvider.themeMode,
           theme: ThemeData(
-            useMaterial3: true,
+            useMaterial3: themeProvider.useMaterial3,
             colorScheme: lightScheme,
             textTheme: ThemeData.light().textTheme.apply(fontFamily: 'Outfit'),
+            cardTheme: commonCardTheme,
             pageTransitionsTheme: PageTransitionsTheme(
               builders: {
                 for (final platform in TargetPlatform.values)
@@ -165,9 +190,10 @@ class MyApp extends StatelessWidget {
             ),
           ),
           darkTheme: ThemeData(
-            useMaterial3: true,
+            useMaterial3: themeProvider.useMaterial3,
             colorScheme: darkScheme,
             textTheme: ThemeData.dark().textTheme.apply(fontFamily: 'Outfit'),
+            cardTheme: commonCardTheme,
             pageTransitionsTheme: PageTransitionsTheme(
               builders: {
                 for (final platform in TargetPlatform.values)
@@ -182,170 +208,116 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthScreen extends StatefulWidget {
-  final bool dynamicColorSupported;
-
-  const AuthScreen({super.key, required this.dynamicColorSupported});
-
-  @override
-  State<AuthScreen> createState() => _AuthScreenState();
-}
-
-class _AuthScreenState extends State<AuthScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
-  final _passwordController = TextEditingController();
-
-  void _submit() async {
-    if (_formKey.currentState!.validate()) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('hasLoggedIn', true);
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => ResponsiveScaffold(dynamicColorSupported: widget.dynamicColorSupported)),
-      );
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Login or Sign Up')),
-      body: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              TextFormField(
-                controller: _usernameController,
-                decoration: const InputDecoration(labelText: 'Username'),
-                validator: (value) =>
-                value!.isEmpty ? 'Please enter a username' : null,
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _passwordController,
-                decoration: const InputDecoration(labelText: 'Password'),
-                obscureText: true,
-                validator: (value) =>
-                value!.isEmpty ? 'Please enter a password' : null,
-              ),
-              const SizedBox(height: 32),
-              ElevatedButton(
-                onPressed: _submit,
-                child: const Text('Continue'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
+// ResponsiveScaffold is the main UI scaffold that adapts navigation for wide or narrow screens
 class ResponsiveScaffold extends StatefulWidget {
-  final bool dynamicColorSupported;
+  final bool dynamicColorSupported; // Whether dynamic color is supported on this device
 
-  const ResponsiveScaffold({super.key, required this.dynamicColorSupported});
+  const ResponsiveScaffold({Key? key, required this.dynamicColorSupported})
+      : super(key: key);
 
   @override
   State<ResponsiveScaffold> createState() => _ResponsiveScaffoldState();
 }
 
 class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
-  int _selectedIndex = 0;
-  InAppWebViewController? _webViewController;
-  bool _hasError = false;
-
-  final List<String> _urls = [
-    'https://thehighlandcafe.github.io/hioswebcore/rewards/hicard/home.html',
-    'https://thehighlandcafe.github.io/hioswebcore/rewards/hicard/offers.html',
-    'https://thehighlandcafe.github.io/hioswebcore/rewards/hicard/pay.html',
-    'https://thehighlandcafe.github.io/hioswebcore/rewards/hicard/account.html',
-  ];
-
-  final List<String> _titles = [
-    'Home',
-    'Rewards',
-    'Pay',
-    'Account',
-  ];
+  int _selectedIndex = 0; // Tracks currently selected navigation index
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
-      _hasError = false;
     });
-    _webViewController?.loadUrl(
-      urlRequest: URLRequest(url: WebUri(_urls[index])),
-    );
+  }
+
+  // This method returns the current page based on the selected index.
+  // It replaces the InAppWebView.
+  Widget _buildCurrentPage() {
+    switch (_selectedIndex) {
+      case 0:
+        return const HomePage();
+      case 1:
+        return const RewardsPage();
+      case 2:
+        return const PayPage();
+      case 3:
+        return const AccountPage();
+      default:
+      // Fallback for an invalid index
+        return const Center(child: Text("Page not found."));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final bool isWideScreen = MediaQuery.of(context).size.width >= 600;
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final bool useMaterial3 = themeProvider.useMaterial3;
+
+    // Define FAB menu items, similar to Harmony app
+    final List<MiniFabItem> menuFabItems = [
+      MiniFabItem(
+        icon: Icons.settings_rounded,
+        label: 'Settings',
+        onTap: () {
+          if (context.mounted) {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsPage()));
+          }
+        },
+      ),
+      MiniFabItem(
+        icon: Icons.help_outline_rounded,
+        label: 'Help',
+        onTap: () {
+          if (context.mounted) {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const HelpcenterPage()));
+          }
+        },
+      ),
+      MiniFabItem(
+        icon: Icons.web_rounded,
+        label: 'Visit Blog',
+        onTap: () async {
+          const url = 'https://hienterprises.blogspot.com';
+          final uri = Uri.parse(url);
+          if (await canLaunchUrl(uri)) {
+            await launchUrl(uri, mode: LaunchMode.externalApplication);
+          } else {
+            if (context.mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Could not launch $url')),
+              );
+            }
+          }
+        },
+      ),
+    ];
 
     return Scaffold(
-      appBar: AppBar(
-        titleSpacing: 0,
-        title: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Text(
-            _titles[_selectedIndex],
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.menu_open_rounded),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const FullscreenMenuPage()),
-              );
-            },
-          ),
-        ],
-      ),
+      // AppBar is removed to give each fragment control over its own app bar if needed.
       body: Row(
         children: [
-          if (isWideScreen) _buildNavigationRail(),
+          if (isWideScreen) _buildNavigationRail(isWideScreen),
           Expanded(
-            child: _hasError
-                ? _buildErrorPage()
-                : InAppWebView(
-              initialUrlRequest:
-              URLRequest(url: WebUri(_urls[_selectedIndex])),
-              initialOptions: InAppWebViewGroupOptions(
-                crossPlatform: InAppWebViewOptions(
-                  javaScriptEnabled: true,
-                ),
-              ),
-              onWebViewCreated: (controller) {
-                _webViewController = controller;
-              },
-              onLoadError: (_, __, ___, ____) {
-                setState(() => _hasError = true);
-              },
-              onLoadHttpError: (_, __, ___, ____) {
-                setState(() => _hasError = true);
-              },
-            ),
+            // The body now builds a native fragment instead of a WebView
+            child: _buildCurrentPage(),
           ),
         ],
       ),
-      bottomNavigationBar: isWideScreen ? null : _buildNavigationBar(),
+      bottomNavigationBar: isWideScreen ? null : _buildNavigationBar(useMaterial3),
+      // Floating Action Button for menu items, adopted from Harmony
+      floatingActionButton: AnimatedFabMenu(fabItems: menuFabItems),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
 
-  NavigationRail _buildNavigationRail() {
+  // Builds the NavigationRail for wider screens
+  NavigationRail _buildNavigationRail(bool isWideScreen) {
     return NavigationRail(
       selectedIndex: _selectedIndex,
       onDestinationSelected: _onItemTapped,
-      labelType: NavigationRailLabelType.all,
+      labelType: isWideScreen
+          ? NavigationRailLabelType.all
+          : NavigationRailLabelType.none,
+      // Destinations updated for HiCard
       destinations: const [
         NavigationRailDestination(icon: Icon(Icons.home_rounded), label: Text('Home')),
         NavigationRailDestination(icon: Icon(Icons.stars_rounded), label: Text('Rewards')),
@@ -355,47 +327,48 @@ class _ResponsiveScaffoldState extends State<ResponsiveScaffold> {
     );
   }
 
-  Widget _buildNavigationBar() {
-    return Theme(
-      data: Theme.of(context).copyWith(
-        navigationBarTheme: const NavigationBarThemeData(
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
-        ),
-      ),
-      child: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: _onItemTapped,
-        height: 60,
-        destinations: const [
-          NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Home'),
-          NavigationDestination(icon: Icon(Icons.stars_rounded), label: 'Rewards'),
-          NavigationDestination(icon: Icon(Icons.wallet_rounded), label: 'Pay'),
-          NavigationDestination(icon: Icon(Icons.account_circle_rounded), label: 'Account'),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildErrorPage() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.cloud_off, size: 80),
-          const SizedBox(height: 20),
-          const Text('Failed to load page. Please check your connection.'),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _hasError = false;
-              });
-              _webViewController?.reload();
-            },
-            child: const Text('Retry'),
+  // Builds the BottomNavigationBar for narrower screens
+  Widget _buildNavigationBar(bool useMaterial3) {
+    if (useMaterial3) {
+      // Material 3 style NavigationBar
+      return Theme(
+        data: Theme.of(context).copyWith(
+          navigationBarTheme: const NavigationBarThemeData(
+            labelBehavior: NavigationDestinationLabelBehavior.alwaysHide,
           ),
+        ),
+        child: NavigationBar(
+          selectedIndex: _selectedIndex,
+          onDestinationSelected: _onItemTapped,
+          height: 60,
+          elevation: 3,
+          // Destinations updated for HiCard
+          destinations: const [
+            NavigationDestination(icon: Icon(Icons.home_rounded), label: 'Home'),
+            NavigationDestination(icon: Icon(Icons.stars_rounded), label: 'Rewards'),
+            NavigationDestination(icon: Icon(Icons.wallet_rounded), label: 'Pay'),
+            NavigationDestination(icon: Icon(Icons.account_circle_rounded), label: 'Account'),
+          ],
+        ),
+      );
+    } else {
+      // Material 2 style BottomNavigationBar
+      return BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        type: BottomNavigationBarType.fixed,
+        selectedItemColor: Theme.of(context).colorScheme.primary,
+        unselectedItemColor: Theme.of(context).colorScheme.onSurfaceVariant,
+        showSelectedLabels: false,
+        showUnselectedLabels: false,
+        // Items updated for HiCard
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.stars_rounded), label: 'Rewards'),
+          BottomNavigationBarItem(icon: Icon(Icons.wallet_rounded), label: 'Pay'),
+          BottomNavigationBarItem(icon: Icon(Icons.account_circle_rounded), label: 'Account'),
         ],
-      ),
-    );
+      );
+    }
   }
 }
