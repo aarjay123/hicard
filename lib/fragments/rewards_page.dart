@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
 // A simple data model for a reward offer.
 class _Offer {
@@ -6,84 +8,214 @@ class _Offer {
   final String description;
   final String expiryInfo;
   final int? points; // Null for expired offers without a redeem button.
+  final DateTime? postedDate; // New field to store the parsed posted date.
 
-  // The constructor is now 'const' to allow for compile-time constant instantiation.
   const _Offer({
     required this.title,
     required this.description,
     required this.expiryInfo,
     this.points,
+    this.postedDate,
   });
+
+  // Factory constructor to parse a post from the Blogger API JSON response.
+  factory _Offer.fromBloggerPost(Map<String, dynamic> post) {
+    String rawContent = post['content'] ?? '';
+    // Use a special marker in your blog post to separate description from details.
+    const detailMarker = '<!--DETAILS-->';
+    String description = rawContent.split(detailMarker).first.trim();
+    String detailsSection = rawContent.contains(detailMarker)
+        ? rawContent.split(detailMarker).last.trim()
+        : '';
+
+    String expiryInfo = 'No expiry information.';
+    int? points;
+    DateTime? postedDate;
+
+    // Parse the details line by line.
+    for (String line in detailsSection.split('\n')) {
+      if (line.toLowerCase().startsWith('expires:')) {
+        expiryInfo = line.substring('expires:'.length).trim();
+      } else if (line.toLowerCase().startsWith('points:')) {
+        points = int.tryParse(line.substring('points:'.length).trim());
+      } else if (line.toLowerCase().startsWith('posted:')) {
+        String dateString = line.substring('posted:'.length).trim();
+        // Attempt to parse the date string. Assumes a "dd/MM/yyyy HH:mm" format.
+        try {
+          List<String> parts = dateString.split(' ');
+          List<String> dateParts = parts[0].split('/');
+          List<String> timeParts = parts[1].split(':');
+          postedDate = DateTime(
+            int.parse(dateParts[2]), // year
+            int.parse(dateParts[1]), // month
+            int.parse(dateParts[0]), // day
+            int.parse(timeParts[0]), // hour
+            int.parse(timeParts[1]), // minute
+          );
+        } catch (e) {
+          // If parsing fails, leave the date as null.
+          postedDate = null;
+        }
+      }
+    }
+
+    return _Offer(
+      title: post['title'] ?? 'No Title',
+      description: description,
+      expiryInfo: expiryInfo,
+      points: points,
+      postedDate: postedDate,
+    );
+  }
 }
 
 // --- RewardsPage Fragment ---
-// This widget displays the user's rewards, barcode, and available offers.
-class RewardsPage extends StatelessWidget {
+// This widget now fetches offers dynamically from a Blogger blog.
+class RewardsPage extends StatefulWidget {
   const RewardsPage({Key? key}) : super(key: key);
 
-  // --- Mock Data ---
-  // In a real app, this data would come from an API.
-  // Explicitly typing the list and using a const constructor for the objects.
-  final List<_Offer> _activeOffers = const [
-    _Offer(
-      title: 'Summer 2025 Special Drinks Deal!',
-      description: 'On this Summer 2025, make this summer special for you, with 5% off any small tea at any of our restaurants! Don\'t miss out though!',
-      expiryInfo: 'Posted 18/05/2025 16:14, offer expires 25/05/2025 23:59',
-      points: 1500,
-    ),
-  ];
+  @override
+  State<RewardsPage> createState() => _RewardsPageState();
+}
 
-  final List<_Offer> _expiredOffers = const [
-    _Offer(
-      title: 'HiRewards Overhaul 2024 Special Deal!',
-      description: 'On this design overhaul of HiRewards 2024, make this year special, with 5% off a Small Tea at any HiCafe™ branch! Don\'t miss out though!',
-      expiryInfo: 'Posted 31/08/2024 10:00, offer expired 24/09/2024 23:59',
-    ),
-    _Offer(
-      title: 'HiRewards Opening 2023 Special Stay Deal!',
-      description: 'On this opening of HiRewards 2023, make this year special, with 5% off any stay above 15 days at any SnugMotels, WorstEastern, or HotelComfy branch! Don\'t miss out though!',
-      expiryInfo: 'Posted 20/10/2023 16:54, offer expired 31/10/2023 23:59',
-    ),
-  ];
+class _RewardsPageState extends State<RewardsPage> {
+  List<_Offer> _activeOffers = [];
+  List<_Offer> _expiredOffers = [];
+  bool _isLoading = true;
+  String? _error;
 
+  // TODO: Replace these with your actual Blogger credentials.
+  final String _blogId = '8654667946288784337';
+  final String _apiKey = 'AIzaSyBWqVZsarbdDTsKwabpao7kiVJSvxThvSA';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchOffers();
+  }
+
+  // Fetches offers from the Blogger API.
+  Future<void> _fetchOffers() async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    if (_blogId == 'YOUR_BLOG_ID' || _apiKey == 'YOUR_API_KEY') {
+      setState(() {
+        _error = 'Please configure your Blog ID and API Key in the code.';
+        _isLoading = false;
+      });
+      return;
+    }
+
+    try {
+      // Fetch active and expired offers concurrently.
+      final responses = await Future.wait([
+        _fetchOffersByLabel('active-offer'),
+        _fetchOffersByLabel('expired-offer'),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _activeOffers = responses[0];
+          _expiredOffers = responses[1];
+        });
+      }
+    } on Exception catch (e) {
+      if (mounted) {
+        setState(() {
+          // Display the specific error message from the exception.
+          _error = e.toString().replaceFirst('Exception: ', '');
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  // Helper function to fetch posts for a specific label.
+  Future<List<_Offer>> _fetchOffersByLabel(String label) async {
+    final url = Uri.parse(
+        'https://www.googleapis.com/blogger/v3/blogs/$_blogId/posts?fetchBodies=true&labels=$label&key=$_apiKey');
+    final response = await http.get(url);
+
+    // Check the HTTP status code to provide more specific error messages.
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      final List<dynamic> posts = data['items'] ?? [];
+      List<_Offer> offers = posts.map((post) => _Offer.fromBloggerPost(post)).toList();
+
+      // Sort the offers by postedDate, newest first.
+      // Offers without a valid date will be placed at the end of the list.
+      offers.sort((a, b) {
+        if (a.postedDate == null && b.postedDate == null) return 0;
+        if (a.postedDate == null) return 1;
+        if (b.postedDate == null) return -1;
+        return b.postedDate!.compareTo(a.postedDate!);
+      });
+
+      return offers;
+    } else if (response.statusCode == 400) {
+      throw Exception('Bad Request (400): Check if your Blog ID is correct.');
+    } else if (response.statusCode == 401 || response.statusCode == 403) {
+      throw Exception('Authorization Error (401/403): Check if your API Key is correct and the Blogger API is enabled.');
+    } else if (response.statusCode == 404) {
+      throw Exception('Not Found (404): The blog or post could not be found.');
+    } else {
+      // Throw a generic exception for other errors.
+      throw Exception('Failed to load posts (Status code: ${response.statusCode}).');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Using DefaultTabController to manage the state of the tabs.
     return DefaultTabController(
-      length: 2, // The number of tabs
+      length: 2,
       child: Scaffold(
         body: SafeArea(
-          child: NestedScrollView(
-            headerSliverBuilder: (context, innerBoxIsScrolled) {
-              return [
-                SliverToBoxAdapter(child: _buildHeader(context)),
-                SliverToBoxAdapter(child: _buildBarcodeCard(context)),
-                SliverPersistentHeader(
-                  delegate: _SliverTabBarDelegate(
-                    TabBar(
-                      labelColor: Theme.of(context).colorScheme.onPrimary,
-                      unselectedLabelColor: Theme.of(context).colorScheme.primary,
-                      indicator: BoxDecoration(
-                        borderRadius: BorderRadius.circular(50),
-                        color: Theme.of(context).colorScheme.primary,
+          child: RefreshIndicator(
+            onRefresh: _fetchOffers,
+            child: NestedScrollView(
+              headerSliverBuilder: (context, innerBoxIsScrolled) {
+                return [
+                  SliverToBoxAdapter(child: _buildHeader(context)),
+                  SliverToBoxAdapter(child: _buildBarcodeCard(context)),
+                  SliverPersistentHeader(
+                    delegate: _SliverTabBarDelegate(
+                      TabBar(
+                        labelColor: Theme.of(context).colorScheme.onPrimary,
+                        unselectedLabelColor: Theme.of(context).colorScheme.primary,
+                        indicator: BoxDecoration(
+                          borderRadius: BorderRadius.circular(50),
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        indicatorSize: TabBarIndicatorSize.tab,
+                        tabs: const [
+                          Tab(text: 'Active'),
+                          Tab(text: 'Expired'),
+                        ],
                       ),
-                      indicatorSize: TabBarIndicatorSize.tab,
-                      tabs: const [
-                        Tab(text: 'Active'),
-                        Tab(text: 'Expired'),
-                      ],
                     ),
+                    pinned: true,
                   ),
-                  pinned: true,
-                ),
-              ];
-            },
-            body: TabBarView(
-              children: [
-                _buildOfferList(_activeOffers),
-                _buildOfferList(_expiredOffers),
-              ],
+                ];
+              },
+              body: _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _error != null
+                  ? _buildErrorView()
+                  : TabBarView(
+                children: [
+                  _buildOfferList(_activeOffers, 'No active offers found.'),
+                  _buildOfferList(_expiredOffers, 'No expired offers found.'),
+                ],
+              ),
             ),
           ),
         ),
@@ -91,7 +223,8 @@ class RewardsPage extends StatelessWidget {
     );
   }
 
-  /// Builds the main header for the page, styled like the HomePage.
+  // --- BUILDER WIDGETS ---
+
   Widget _buildHeader(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final colorScheme = Theme.of(context).colorScheme;
@@ -126,7 +259,6 @@ class RewardsPage extends StatelessWidget {
     );
   }
 
-  /// Builds the card displaying the user's barcode.
   Widget _buildBarcodeCard(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     return Padding(
@@ -160,8 +292,37 @@ class RewardsPage extends StatelessWidget {
     );
   }
 
-  /// Builds a list of offer cards from a list of [_Offer] objects.
-  Widget _buildOfferList(List<_Offer> offers) {
+  Widget _buildErrorView() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.cloud_off_rounded, size: 60),
+            const SizedBox(height: 16),
+            Text(
+              _error!,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _fetchOffers,
+              child: const Text('Retry'),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOfferList(List<_Offer> offers, String emptyMessage) {
+    if (offers.isEmpty) {
+      return Center(
+        child: Text(emptyMessage),
+      );
+    }
     return ListView.builder(
       padding: const EdgeInsets.all(16.0),
       itemCount: offers.length,
@@ -172,7 +333,7 @@ class RewardsPage extends StatelessWidget {
         return Card(
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16.0)),
-          color: colorScheme.surfaceVariant, // Using a slightly different color for offer cards
+          color: colorScheme.surfaceVariant,
           margin: const EdgeInsets.only(bottom: 16.0),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -209,8 +370,6 @@ class RewardsPage extends StatelessWidget {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Scan the QR code on the homepage to redeem.'),
-                            // The behavior is now fixed to avoid layout issues with the FAB and BottomNavBar.
-                            // The 'floating' behavior was conflicting with the Scaffold's other bottom widgets.
                             behavior: SnackBarBehavior.fixed,
                           ),
                         );
