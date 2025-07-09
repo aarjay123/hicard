@@ -1,373 +1,122 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:dropdown_button2/dropdown_button2.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-// Import shared UI components
-import '../settings_ui_components.dart'; // Ensure this path is correct
+// Local Imports
+import '../settings_ui_components.dart';
+import 'appearance_settings_page.dart';
 
-import '../theme_provider.dart';
-import '../app_colour_schemes.dart';
-
+// Placeholder imports for navigation
 import 'privacy_policy_page.dart';
 import 'websites_page.dart';
 import 'updates_page.dart';
 import 'apps_services_page.dart';
 import 'socials_page.dart';
-import 'web_settings_page.dart';
-import 'about_hioswebcore.dart';
 
-import '../device_info_helper.dart';
 
-class SettingsPage extends StatelessWidget {
+class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key});
 
-  static const double dropdownWidth = 200; // Common dropdown width
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  String _version = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersionInfo();
+  }
+
+  // Fetches the app version to display in the about dialog.
+  Future<void> _loadVersionInfo() async {
+    final info = await PackageInfo.fromPlatform();
+    setState(() {
+      _version = '${info.version}+${info.buildNumber}';
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-    final themeProvider = Provider.of<ThemeProvider>(context);
-
-    return FutureBuilder<bool>(
-      future: DeviceInfoHelper.supportsDynamicColor(),
-      builder: (context, snapshot) {
-        final bool supportsDynamicColor = snapshot.data ?? false;
-        final bool dynamicColorEnabled = themeProvider.useDynamicColor;
-
-        // Data structure for settings items on this page
-        // The _SettingsItem class now primarily serves as a data holder
-        final groups = [
-          _SettingsGroup(
-            title: "Appearance",
-            items: [
-              _SettingsItem(
-                icon: Icons.palette_rounded,
-                label: "Appearance Settings",
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const WebSettingsPage()),
-                ),
-              ),
-              _SettingsItem(
-                icon: Icons.brightness_6_rounded,
-                label: "Theme",
-                trailing: _themeDropdown(themeProvider, colorScheme, context), // Pass context
-                onTap: null, // onTap is handled by the dropdown itself
-              ),
-              _SettingsItem(
-                icon: Icons.format_color_fill_rounded,
-                label: "Use Dynamic Colour",
-                trailing: Switch(
-                  value: dynamicColorEnabled,
-                  onChanged: supportsDynamicColor
-                      ? (value) => themeProvider.setUseDynamicColor(value)
-                      : null,
-                  activeColor: supportsDynamicColor
-                      ? null
-                      : colorScheme.onSurface.withOpacity(0.38),
-                ),
-                onTap: supportsDynamicColor ? () => themeProvider.setUseDynamicColor(!dynamicColorEnabled) : null,
-              ),
-              if (!dynamicColorEnabled)
-                _SettingsItem(
-                  icon: Icons.color_lens_rounded,
-                  label: "Color Scheme",
-                  trailing: _schemeDropdown(themeProvider, colorScheme, context), // Pass context
-                  onTap: null, // onTap is handled by the dropdown itself
-                ),
-            ],
+    return SettingsPageTemplate(
+      title: "Settings",
+      children: [
+        // --- General Group ---
+        const SettingsGroupTitle(title: "General"),
+        SettingsListItem(
+          icon: Icons.palette_rounded,
+          label: "Appearance",
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AppearanceSettingsPage()),
           ),
-          _SettingsGroup(
-            title: "General",
-            items: [
-              _SettingsItem(
-                icon: Icons.system_update_rounded,
-                label: "Updates",
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const UpdatesPage()),
-                ),
-              ),
-              _SettingsItem(
-                icon: Icons.apps_rounded,
-                label: "Apps & Services",
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AppsServicesPage()),
-                ),
-              ),
-              _SettingsItem(
-                icon: Icons.language_rounded,
-                label: "Websites",
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const WebsitesPage()),
-                ),
-              ),
-              _SettingsItem(
-                icon: Icons.people_rounded,
-                label: "Socials",
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SocialsPage()),
-                ),
-              ),
-            ],
-          ),
-          _SettingsGroup(
-            title: "About",
-            items: [
-              _SettingsItem(
-                icon: Icons.info_rounded,
-                label: "About HarmonyCore",
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AboutHioswebcore()),
-                ),
-              ),
-              _SettingsItem(
-                icon: Icons.perm_device_info_rounded,
-                label: "About App",
-                onTap: () => showAboutDialog(
-                  context: context,
-                  applicationName: 'HiCard by The Highland Cafe',
-                  applicationVersion: '1.1',
-                  applicationLegalese:
-                  'Copyright © The Highland Cafe™ Ltd. 2025. All rights Reserved.',
-                ),
-              ),
-              _SettingsItem(
-                icon: Icons.privacy_tip_rounded,
-                label: "Privacy Policy",
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const PrivacyPolicyPage()),
-                ),
-              ),
-            ],
-          ),
-          _SettingsGroup(
-              title: "Your HiAccount",
-              items: [
-                _SettingsItem(
-                    icon: Icons.logout_rounded,
-                    label: "Log Out",
-                    onTap: () async {
-                      final prefs = await SharedPreferences.getInstance();
-                      await prefs.setBool('hasLoggedIn', false);
-
-                      if (context.mounted) {
-                        Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
-                      }
-                    }
-                )
-              ]
-          )
-        ];
-
-        return Scaffold(
-          appBar: AppBar(title: const Text("Settings")),
-          body: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: ListView.builder(
-              itemCount: groups.length,
-              itemBuilder: (context, groupIndex) {
-                final group = groups[groupIndex];
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Use the shared SettingsGroupTitle widget
-                    SettingsGroupTitle(title: group.title),
-                    // Items in the group
-                    Column(
-                      children: List.generate(group.items.length, (index) {
-                        final itemData = group.items[index];
-                        final isFirst = index == 0;
-                        final isLast = index == group.items.length - 1;
-
-                        // Use the shared SettingsListItem widget
-                        return SettingsListItem(
-                          icon: itemData.icon,
-                          label: itemData.label,
-                          // subtitle: itemData.subtitle, // Uncomment if your _SettingsItem has subtitles
-                          trailing: itemData.trailing,
-                          onTap: itemData.onTap,
-                          isFirstItem: isFirst,
-                          isLastItem: isLast,
-                        );
-                      }),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // Helper method to build the theme dropdown
-  // Added BuildContext parameter as Theme.of(context) is used
-  Widget _themeDropdown(ThemeProvider provider, ColorScheme colorScheme, BuildContext context) {
-    return SizedBox(
-      width: dropdownWidth,
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton2<ThemeMode>(
-          isExpanded: true,
-          value: provider.themeMode,
-          onChanged: (ThemeMode? mode) {
-            if (mode != null) provider.setTheme(mode);
-          },
-          items: const [
-            DropdownMenuItem(value: ThemeMode.system, child: Text("System")),
-            DropdownMenuItem(value: ThemeMode.light, child: Text("Light")),
-            DropdownMenuItem(value: ThemeMode.dark, child: Text("Dark")),
-          ],
-          buttonStyleData: ButtonStyleData(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: colorScheme.outline),
-              // Use a color that contrasts well with the item's background
-              color: Theme.of(context).brightness == Brightness.light ? colorScheme.surface : colorScheme.surfaceContainerHighest,
-            ),
-            elevation: 0,
-          ),
-          dropdownStyleData: DropdownStyleData(
-            maxHeight: 160,
-            width: dropdownWidth,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              color: colorScheme.surfaceContainerLowest, // Adjusted for better visibility
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            elevation: 8,
-            offset: const Offset(0, -4), // Adjust dropdown position
-            scrollbarTheme: ScrollbarThemeData(
-              radius: const Radius.circular(8),
-              thickness: MaterialStateProperty.all(6),
-              thumbVisibility: MaterialStateProperty.all(true),
-            ),
-          ),
-          iconStyleData: IconStyleData(
-            icon: Icon(Icons.keyboard_arrow_down_rounded,
-                color: colorScheme.onSurfaceVariant), // Adjusted color
-            iconSize: 24,
-          ),
-          menuItemStyleData: MenuItemStyleData( // Ensure text color contrasts with dropdown background
-            selectedMenuItemBuilder: (context, child) {
-              return Container(
-                color: colorScheme.primary.withOpacity(0.12),
-                child: child,
-              );
-            },
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          isFirstItem: true,
+        ),
+        SettingsListItem(
+          icon: Icons.system_update_rounded,
+          label: "Updates",
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const UpdatesPage()),
           ),
         ),
-      ),
-    );
-  }
-
-  // Helper method to build the color scheme dropdown
-  // Added BuildContext parameter
-  Widget _schemeDropdown(ThemeProvider provider, ColorScheme colorScheme, BuildContext context) {
-    return SizedBox(
-      width: dropdownWidth,
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton2<String>(
-          isExpanded: true,
-          value: provider.selectedSchemeKey,
-          onChanged: (String? key) {
-            if (key != null) provider.setPredefinedColorScheme(key);
-          },
-          items: predefinedThemes.entries.map((entry) {
-            return DropdownMenuItem(
-              value: entry.key,
-              child: Text(entry.key, style: TextStyle(color: colorScheme.onSurface)), // Ensure text color
-            );
-          }).toList(),
-          buttonStyleData: ButtonStyleData(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: colorScheme.outline),
-              // Use a color that contrasts well with the item's background
-              color: Theme.of(context).brightness == Brightness.light ? colorScheme.surface : colorScheme.surfaceContainerHighest,
-            ),
-            elevation: 0,
-          ),
-          dropdownStyleData: DropdownStyleData(
-            maxHeight: 200,
-            width: dropdownWidth,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(14),
-              color: colorScheme.surfaceContainerLowest, // Adjusted for better visibility
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            offset: const Offset(0,-4), // Adjust dropdown position
-            scrollbarTheme: ScrollbarThemeData(
-              radius: const Radius.circular(8),
-              thickness: MaterialStateProperty.all(6),
-              thumbVisibility: MaterialStateProperty.all(true),
-            ),
-          ),
-          iconStyleData: IconStyleData(
-            icon: Icon(Icons.keyboard_arrow_down_rounded,
-                color: colorScheme.onSurfaceVariant), // Adjusted color
-            iconSize: 24,
-          ),
-          menuItemStyleData: MenuItemStyleData( // Ensure text color contrasts with dropdown background
-            selectedMenuItemBuilder: (context, child) {
-              return Container(
-                color: colorScheme.primary.withOpacity(0.12),
-                child: child,
-              );
-            },
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        SettingsListItem(
+          icon: Icons.apps_rounded,
+          label: "Apps & Services",
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AppsServicesPage()),
           ),
         ),
-      ),
+        SettingsListItem(
+          icon: Icons.language_rounded,
+          label: "Websites",
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const WebsitesPage()),
+          ),
+        ),
+        SettingsListItem(
+          icon: Icons.people_rounded,
+          label: "Socials",
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SocialsPage()),
+          ),
+          isLastItem: true,
+        ),
+
+        // --- About Group ---
+        const SettingsGroupTitle(title: "About"),
+        SettingsListItem(
+          icon: Icons.perm_device_info_rounded,
+          label: "About App",
+          onTap: () => showAboutDialog(
+            context: context,
+            applicationName: 'HiCard by The Highland Cafe',
+            applicationVersion: _version,
+            applicationLegalese:
+            'Copyright © The Highland Cafe™ Ltd. 2025. All rights Reserved.',
+          ),
+          isFirstItem: true,
+        ),
+        SettingsListItem(
+          icon: Icons.privacy_tip_rounded,
+          label: "Privacy Policy",
+          onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const PrivacyPolicyPage()),
+          ),
+          isLastItem: true,
+        ),
+
+        // --- Your HiAccount Group ---
+        const SettingsGroupTitle(title: "Your HiAccount"),
+        SettingsListItem(
+          icon: Icons.logout_rounded,
+          isFirstItem: true,
+          isLastItem: true,
+          label: "Log Out",
+          onTap: () async {
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setBool('hasLoggedIn', false);
+
+            if (context.mounted) {
+              Navigator.of(context).pushNamedAndRemoveUntil('/', (route) => false);
+            }
+          }
+        )
+      ],
     );
   }
-}
-
-// Data class for settings groups on this specific page
-class _SettingsGroup {
-  final String title;
-  final List<_SettingsItem> items;
-
-  _SettingsGroup({required this.title, required this.items});
-}
-
-// Data class for settings items on this specific page
-// It now primarily holds data, including the specific trailing widget
-class _SettingsItem {
-  final IconData icon;
-  final String label;
-  final Widget? trailing; // Keep this for items that have specific trailing widgets
-  final VoidCallback? onTap;
-
-  _SettingsItem({
-    required this.icon,
-    required this.label,
-    this.trailing,
-    this.onTap,
-  });
 }
